@@ -615,14 +615,18 @@ const restoreGlobalState = () => {
     globalState.thread = threadStack.pop();
 };
 
-const insertRuntime = source => {
+const insertRuntime = (source, bindingNames) => {
     let result = baseRuntime;
     for (const functionName of Object.keys(runtimeFunctions)) {
         if (source.includes(functionName)) {
             result += `${runtimeFunctions[functionName]};`;
         }
     }
-    result += `return ${source}`;
+    if (bindingNames && bindingNames.length > 0) {
+        result += `return function (${bindingNames.join(',')}) { return ${source}; }`;
+    } else {
+        result += `return ${source}`;
+    }
     return result;
 };
 
@@ -631,10 +635,19 @@ const insertRuntime = source => {
  * @param {string} source The string to evaluate.
  * @returns {*} The result of evaluating the string.
  */
-const scopedEval = source => {
-    const withRuntime = insertRuntime(source);
+const scopedEval = (source, bindings) => {
+    const names = bindings ? Object.keys(bindings) : [];
+    const withRuntime = insertRuntime(source, names);
     try {
-        return new Function('globalState', withRuntime)(globalState);
+        if (names.length === 0) {
+            return new Function('globalState', withRuntime)(globalState);
+        }
+
+        // Evaluate the generated factory inside a nested function so injected names can
+        // shadow runtime helpers without colliding with their declarations.
+        const bindingValues = names.map(name => bindings[name]);
+        const evaluateWithBindings = new Function('globalState', withRuntime)(globalState);
+        return evaluateWithBindings(...bindingValues);
     } catch (e) {
         globalState.log.error('was unable to compile script', withRuntime);
         throw e;
@@ -645,5 +658,7 @@ execute.scopedEval = scopedEval;
 execute.runtimeFunctions = runtimeFunctions;
 execute.saveGlobalState = saveGlobalState;
 execute.restoreGlobalState = restoreGlobalState;
+// Increment whenever generated code requires incompatible runtime behavior.
+execute.RUNTIME_ABI = 1;
 
 module.exports = execute;

@@ -338,6 +338,12 @@ class IntermediateScript {
         this.cachedCompileResult = null;
 
         /**
+         * Cached serializable source generated for this script.
+         * @type {string|null}
+         */
+        this.cachedCompileSource = null;
+
+        /**
          * Cached result of analysing this script.
          * @type {import("./iroptimizer").TypeState|null}
          */

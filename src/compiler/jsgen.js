@@ -1173,17 +1173,16 @@ class JSGenerator {
     }
 
     /**
-     * Compile this script.
-     * @returns {Function} The factory function for the script.
+     * Compile this script to serializable JavaScript source.
+     * @returns {string} Source for the factory function.
      */
-    compile () {
+    compileToSource () {
         if (this.script.stack) {
             this.descendStack(this.script.stack, new Frame(false));
         }
         this.stopScript();
 
         const factory = this.createScriptFactory();
-        const fn = jsexecute.scopedEval(factory);
 
         if (this.debug) {
             log.info(`JS: ${this.target.getName()}: compiled ${this.script.procedureCode || 'script'}`, factory);
@@ -1193,7 +1192,15 @@ class JSGenerator {
             JSGenerator.testingApparatus.report(this, factory);
         }
 
-        return fn;
+        return factory;
+    }
+
+    /**
+     * Compile this script.
+     * @returns {Function} The factory function for the script.
+     */
+    compile () {
+        return jsexecute.scopedEval(this.compileToSource());
     }
 }
 
