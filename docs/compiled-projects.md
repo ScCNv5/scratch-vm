@@ -125,6 +125,19 @@ This format removes the original Scratch block source but does not make client-s
 engineer. Generated JavaScript, literal values, runtime calls, and extension implementations remain observable to the
 client.
 
+## Salted opcode lookup for external transforms
+
+The compiler continues to emit `runtime.getOpcodeFunction(opcode)` for compatibility. External trusted transforms can
+remove literal opcode names by deriving a 48-bit ID and calling `runtime.getOpcodeFunctionById(id, salt)` instead. The
+ID is the first six bytes, interpreted as a big-endian integer, of
+`SHA-256("sb3c-opcode-v1\0" + salt + "\0" + opcode)`.
+
+`id` must be a non-negative JavaScript safe integer and `salt` must be a non-empty string. Invalid inputs throw a
+`TypeError`; an unknown ID returns `undefined`, matching the legacy lookup. The runtime caches the reverse mapping for
+one salt, invalidates it when primitives are registered or refreshed, and rejects collisions between registered
+opcodes. Salts are public build inputs rather than secrets; salted IDs increase static analysis cost but do not encrypt
+extension behavior.
+
 ## Try the two-stage playground
 
 Run `npm start`, then open `http://localhost:8073/playground/compiled-project.html`. The left side loads a full SB3 and creates a

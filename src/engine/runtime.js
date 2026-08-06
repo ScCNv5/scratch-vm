@@ -24,6 +24,7 @@ const fetchWithTimeout = require('../util/fetch-with-timeout');
 const platform = require('./tw-platform.js');
 const safeStringify = require('../util/tw-safe-stringify.js');
 const MonitorState = require('./tw-monitor-state.js');
+const {createOpcodeIdMap} = require('../util/opcode-id');
 
 // Virtual I/O devices.
 const Clock = require('../io/clock');
@@ -259,6 +260,14 @@ class Runtime extends EventEmitter {
          * @type {Object.<string, Function>}
          */
         this._primitives = {};
+
+        /**
+         * Single-salt cache used by getOpcodeFunctionById. The values are opcode
+         * strings rather than functions so extension primitive refreshes remain visible.
+         * @type {?{salt: string, opcodes: Map<number, string>}}
+         * @private
+         */
+        this._opcodeFunctionIdCache = null;
 
         /**
          * Map to look up all block information by extended opcode.
@@ -1016,6 +1025,7 @@ class Runtime extends EventEmitter {
                 this.compilerRegisterExtension(packageName, packageObject);
             }
         }
+        this._opcodeFunctionIdCache = null;
     }
 
     compilerRegisterExtension (name, extensionObject) {
@@ -1189,6 +1199,7 @@ class Runtime extends EventEmitter {
                 log.error('Error parsing block: ', {block: blockInfo, error: e});
             }
         }
+        this._opcodeFunctionIdCache = null;
     }
 
     /**
@@ -1902,10 +1913,33 @@ class Runtime extends EventEmitter {
     /**
      * Retrieve the function associated with the given opcode.
      * @param {!string} opcode The opcode to look up.
-     * @return {Function} The function which implements the opcode.
+     * @return {Function|undefined} The function which implements the opcode, if known.
      */
     getOpcodeFunction (opcode) {
         return this._primitives[opcode];
+    }
+
+    /**
+     * Retrieve the function associated with a salted, 48-bit opcode identifier.
+     * @param {!number} id The opcode identifier to look up.
+     * @param {!string} salt The public build salt used to derive the identifier.
+     * @return {Function|undefined} The function which implements the opcode, if known.
+     */
+    getOpcodeFunctionById (id, salt) {
+        if (!Number.isSafeInteger(id) || id < 0) {
+            throw new TypeError('Opcode ID must be a non-negative safe integer');
+        }
+        if (typeof salt !== 'string' || salt.length === 0) {
+            throw new TypeError('Opcode ID salt must be a non-empty string');
+        }
+        if (!this._opcodeFunctionIdCache || this._opcodeFunctionIdCache.salt !== salt) {
+            this._opcodeFunctionIdCache = {
+                salt,
+                opcodes: createOpcodeIdMap(Object.keys(this._primitives), salt)
+            };
+        }
+        const opcode = this._opcodeFunctionIdCache.opcodes.get(id);
+        return typeof opcode === 'undefined' ? void 0 : this._primitives[opcode];
     }
 
     /**
