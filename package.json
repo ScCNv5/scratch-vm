@@ -1,13 +1,13 @@
 {
-  "name": "scratch-vm",
-  "version": "2.1.46",
+  "name": "@sccn/scratch-vm",
+  "version": "1.0.0",
   "description": "Virtual Machine for Scratch 3.0",
   "author": "Massachusetts Institute of Technology",
   "license": "MPL-2.0",
-  "homepage": "https://github.com/scratchfoundation/scratch-vm#readme",
+  "homepage": "https://git.fmcraft.us.kg/ScCN/ScratchCN_V4_scratch-vm#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/scratchfoundation/scratch-vm.git"
+    "url": "https://git.fmcraft.us.kg/ScCN/ScratchCN_V4_scratch-vm.git"
   },
   "main": "./src/index.js",
   "browser": "./src/index.js",
@@ -91,5 +91,5 @@
     "webpack-cli": "3.1.0",
     "webpack-dev-server": "3.11.2"
   },
-  "private": true
+  "private": false
 }
