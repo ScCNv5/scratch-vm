@@ -17,8 +17,6 @@ const RenderedTarget = require('./sprites/rendered-target');
 const Sprite = require('./sprites/sprite');
 const StringUtil = require('./util/string-util');
 const formatMessage = require('format-message');
-const compiledProject = require('./compiler/compiled-project');
-const compiledProjectIntegrity = require('./compiler/compiled-project-integrity');
 
 const Variable = require('./engine/variable');
 const newBlockIds = require('./util/new-block-ids');
@@ -330,70 +328,12 @@ class VirtualMachine extends EventEmitter {
     }
 
     /**
-     * Compile the currently loaded project into a JSON-serializable artifact.
-     * @returns {object} Compiled project artifact.
+     * Export structured, optimized IR and source-free initial state for a whole-player build.
+     * The result is structured-cloneable; it is not a runtime loading format.
+     * @returns {object} Build input.
      */
-    exportCompiledProject () {
-        return compiledProject.create(this.runtime);
-    }
-
-    /**
-     * Export the compiled artifact together with a cloned full project.json for protection pipelines.
-     * @returns {{artifact: object, project: object}} Build input for an external protection pipeline.
-     */
-    exportCompiledProjectBuildInput () {
-        return {
-            artifact: this.exportCompiledProject(),
-            project: JSON.parse(this.toJSON())
-        };
-    }
-
-    /**
-     * Load trusted compiled code for the currently loaded project.
-     * @param {object} artifact Compiled project artifact.
-     * @param {object} [options] Loading options.
-     * @param {object} [options.bindings] Runtime values for artifact.requiredBindings.
-     * @param {boolean} [options.requireIntegrity=false] Reject legacy packages without a manifest.
-     * @param {boolean} [options.requireSignature=false] Require a signed manifest.
-     * @param {Function} [options.verifyIntegritySignature] Asynchronously verify a manifest signature.
-     */
-    loadCompiledProject (artifact, options) {
-        compiledProject.load(this.runtime, artifact, options);
-    }
-
-    /**
-     * Load a source-stripped compiled project package. Packages contain executable JavaScript and must be trusted.
-     * @param {ArrayBuffer|Uint8Array|Buffer} input Compiled project package.
-     * @param {object} [options] Loading options.
-     * @param {object} [options.bindings] Runtime values for artifact.requiredBindings.
-     * @returns {Promise<void>} Resolves after the project and compiled scripts are loaded.
-     */
-    async loadCompiledProjectPackage (input, options) {
-        await compiledProjectIntegrity.validateArchivePaths(input);
-        const zip = await JSZip.loadAsync(input);
-        await compiledProjectIntegrity.validate(zip, options);
-        const projectFile = zip.file('project.json');
-        const artifactFile = zip.file('compiled-project.json');
-        if (!projectFile || !artifactFile) {
-            throw new Error('Invalid compiled project package: required files are missing');
-        }
-
-        const [projectJSON, artifactJSON] = await Promise.all([
-            projectFile.async('string'),
-            artifactFile.async('string')
-        ]);
-        const artifact = JSON.parse(artifactJSON);
-        compiledProject.validateRuntimeProject(projectJSON, artifact);
-        const bindings = compiledProject.resolveBindings(artifact, options && options.bindings);
-        const project = JSON.parse(projectJSON);
-        const extensionIDs = Array.isArray(project.extensions) ? project.extensions : [];
-        const extensionURLs = new Map(Object.entries(project.extensionURLs || {}));
-
-        await this._loadProject(input, false);
-        await this._loadExtensions(extensionIDs, extensionURLs);
-        this.setCompilerOptions({enabled: true});
-        compiledProject.load(this.runtime, artifact, {skipSourceHash: true, bindings});
-        this.runtime.handleProjectLoaded();
+    exportSpecializedProjectBuildInput () {
+        return require('./compiler/specialized-project').create(this);
     }
 
     setStageSize (width, height) {
@@ -661,48 +601,6 @@ class VirtualMachine extends EventEmitter {
         }
 
         return zip;
-    }
-
-    /**
-     * Create a source-stripped project zip with compiled scripts.
-     * @returns {JSZip} JSZip zip object representing the compiled project.
-     */
-    _saveCompiledProjectZip (options) {
-        const artifact = options && options.artifact ?
-            JSON.parse(JSON.stringify(options.artifact)) :
-            this.exportCompiledProject();
-        compiledProject.validateForRuntime(this.runtime, artifact);
-        const runtimeProject = compiledProject.createRuntimeProject(JSON.parse(this.toJSON()), artifact);
-        const zip = this._saveProjectZip();
-        const date = new Date(1591657163000);
-        const zipOptions = {
-            date,
-            compression: 'DEFLATE'
-        };
-        zip.file('project.json', runtimeProject, zipOptions);
-        zip.file('compiled-project.json', JSON.stringify(artifact), zipOptions);
-        return zip;
-    }
-
-    /**
-     * Save a source-stripped compiled project package.
-     * @param {JSZip.OutputType} [type] Output type. Defaults to 'blob'.
-     * @param {object} [options] Packaging options.
-     * @param {object} [options.artifact] An externally transformed artifact for the loaded project.
-     * @param {false|object} [options.integrity] Integrity options, or false to omit the manifest.
-     * @param {Function} [options.integrity.signManifest] Asynchronously sign the canonical manifest payload.
-     * @returns {Promise<unknown>} Compiled project package.
-     */
-    saveCompiledProject (type, options) {
-        const zip = this._saveCompiledProjectZip(options);
-        const integrityOptions = options && options.integrity;
-        const addIntegrity = integrityOptions === false ?
-            Promise.resolve() :
-            compiledProjectIntegrity.createManifest(zip, integrityOptions || {});
-        return addIntegrity.then(() => zip.generateAsync({
-            type: type || 'blob',
-            mimeType: 'application/x.scratch.compiled-project'
-        }));
     }
 
     /**

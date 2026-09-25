@@ -362,8 +362,8 @@ const handleCostumeLoadError = function (costume, runtime) {
     costume.asset = runtime.storage.get(costume.assetId);
     costume.md5 = `${costume.assetId}.${costume.asset.dataFormat}`;
 
-    const defaultCostumePromise = (isVector) ?
-        loadVector_(costume, runtime) : loadBitmap_(costume, runtime);
+    const defaultCostumePromise = runtime.renderer ?
+        (isVector ? loadVector_(costume, runtime) : loadBitmap_(costume, runtime)) : Promise.resolve(costume);
 
     return defaultCostumePromise.then(loadedCostume => {
         loadedCostume.broken = {};

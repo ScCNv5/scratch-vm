@@ -94,6 +94,8 @@ class Scratch3MusicBlocks {
      * Decode the full set of drum and instrument sounds, and store the audio buffers in arrays.
      */
     _loadAllSounds () {
+        // Headless build and validation VMs only need extension metadata/state.
+        if (!this.runtime.audioEngine) return;
         const loadingPromises = [];
         this.DRUM_INFO.forEach((drumInfo, index) => {
             const filePath = `drums/${drumInfo.fileName}`;
