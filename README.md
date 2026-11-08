@@ -1,6 +1,10 @@
-## TurboWarp/scratch-vm
+## ScCNv5/scratch-vm
 
 Modified Scratch VM with a JIT compiler and more features.
+
+Source: https://github.com/ScCNv5/scratch-vm
+
+Based on [TurboWarp/scratch-vm](https://github.com/TurboWarp/scratch-vm), with program-specialized player support for [ScCNv5/packager](https://github.com/ScCNv5/packager).
 
 This is a drop-in replacement for LLK/scratch-vm.
 

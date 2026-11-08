@@ -1,13 +1,16 @@
 {
   "name": "@sccn/scratch-vm",
   "version": "1.0.0",
-  "description": "Virtual Machine for Scratch 3.0",
-  "author": "Massachusetts Institute of Technology",
+  "description": "ScCN Scratch virtual machine with JIT compilation and program-specialized players.",
+  "author": "Lu Yifei <118034848+LuYifei2011@users.noreply.github.com>",
   "license": "MPL-2.0",
-  "homepage": "https://git.fmcraft.us.kg/ScCN/ScratchCN_V4_scratch-vm#readme",
+  "homepage": "https://github.com/ScCNv5/scratch-vm#readme",
+  "bugs": {
+    "url": "https://github.com/ScCNv5/scratch-vm/issues"
+  },
   "repository": {
     "type": "git",
-    "url": "https://git.fmcraft.us.kg/ScCN/ScratchCN_V4_scratch-vm.git"
+    "url": "git+https://github.com/ScCNv5/scratch-vm.git"
   },
   "main": "./src/index.js",
   "browser": "./src/index.js",
