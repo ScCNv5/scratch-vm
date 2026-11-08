@@ -23,7 +23,7 @@ class ContinuationGenerator extends JSGenerator {
             effects: {
                 color: 0, fisheye: 0, whirl: 0, pixelate: 0, mosaic: 0, brightness: 0, ghost: 0
             },
-            runtime: {debug: false}});
+            runtime: {debug: false, sampler: {enableCommands: false}}});
         this.program = program;
         this.targetIndex = target.index;
         this.procedureEntries = procedures;
